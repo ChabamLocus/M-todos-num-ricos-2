@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador Cutzamala - Métodos Numéricos & Decisiones Hídricas</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+  <!-- Header Institucional -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded">UNIDAD 2</span>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight text-cyan-400">
+            Laboratorio Numérico: Sistema Cutzamala
+          </h1>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">Derivación e Integración Numérica aplicada a Decisiones Hídricas (ODS 6 & 11)</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="switchTab('tab-historico')" id="btn-historico" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-cyan-600 text-white transition-all shadow">1. Derivación & Taylor</button>
+        <button onclick="switchTab('tab-integracion')" id="btn-integracion" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2. Integración Numérica</button>
+        <button onclick="switchTab('tab-escenarios')" id="btn-escenarios" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">3. Proyección 2026+ & Precios</button>
+        <button onclick="switchTab('tab-inverso')" id="btn-inverso" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">4. Problema Inverso</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Barra de Flujo Metodológico: Las 5 Etapas del Método Numérico -->
+  <section class="max-w-7xl mx-auto px-6 pt-5 pb-1">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 shadow-md">
+      <div class="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2 border-b border-slate-800 pb-1.5">
+        <span class="text-cyan-300 flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          METODOLOGÍA NUMÉRICA APLICADA EN 5 ETAPAS
+        </span>
+        <span class="text-[11px] text-slate-500 hidden sm:inline">Paso uniforme: h = 1 año | Dominio: [2019, 2025]</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px]">
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <span class="text-cyan-400 font-bold block">Etapa 1: Modelo Físico</span>
+          <span class="text-slate-400 block text-[10px]">Balance de masa continuo dV/dt</span>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <span class="text-cyan-400 font-bold block">Etapa 2: Elección Algoritmo</span>
+          <span class="text-slate-400 block text-[10px]">3 pts O(h²) vs. Simpson 1/3 O(h⁴)</span>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <span class="text-cyan-400 font-bold block">Etapa 3: Discretización</span>
+          <span class="text-slate-400 block text-[10px]">Paso h=1 y diferencias finitas</span>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <span class="text-cyan-400 font-bold block">Etapa 4: Auditoría Error</span>
+          <span class="text-slate-400 block text-[10px]">Richardson & Romberg (h vs. 2h)</span>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80 col-span-2 sm:col-span-1">
+          <span class="text-emerald-400 font-bold block">Etapa 5: Decisión & Costo</span>
+          <span class="text-slate-400 block text-[10px]">Solución inversa y presupuestos</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="max-w-7xl mx-auto p-6 space-y-6">
+
+    <!-- SECCIÓN 1: SERIE HISTÓRICA & DERIVACIÓN NUMÉRICA -->
+    <div id="tab-historico" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Panel Gráfico -->
+        <div class="lg:col-span-2 bg-slate-900 p-5 rounded-xl border border-slate-800 shadow flex flex-col justify-between">
+          <div>
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-2 gap-2">
+              <h2 class="text-lg font-semibold text-cyan-300">Etapa 1 & 3: Serie V(t) y Derivadas por Diferencias Finitas</h2>
+              <div class="flex gap-2 text-xs">
+                <button onclick="toggleTangente()" id="btn-tangente" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700">
+                  Ver Rectas Tangentes V'(t)
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Datos oficiales homogéneos al 22 de septiembre ($h=1\text{ año}$). Capacidad implícita $V_{\max} = 782.5\text{ Mm}^3$.</p>
+            <div id="plot-historico" style="height: 400px;"></div>
+          </div>
+          <div class="mt-3 p-2.5 rounded bg-slate-950 border border-slate-800 text-[11px] text-slate-300 flex justify-between items-center">
+            <span><b>Punto de quiebre (2023):</b> Derivada izquierda = <span class="text-rose-400 font-bold">-143.65</span> | Derivada derecha = <span class="text-emerald-400 font-bold">+135.85</span></span>
+            <span class="text-purple-300 font-mono">V''(2023) = +279.5 Mm³/año²</span>
+          </div>
+        </div>
+
+        <!-- Panel Matemático: Etapa 2 y 4 -->
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-md font-bold text-slate-200 border-b border-slate-700 pb-2 mb-3">
+              Desarrollo de las 5 Etapas en Derivación
+            </h3>
+            
+            <div class="space-y-3 text-xs">
+              <!-- Etapa 1 y 2 -->
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] uppercase font-bold text-cyan-400">1. Modelo Físico & 2. Algoritmo</span>
+                <p class="text-slate-300 text-[11px] mt-1">
+                  Se descartan polinomios globales de grado 6 por el <b>fenómeno de Runge</b>. Se eligen fórmulas de 3 puntos basadas en Series de Taylor truncadas en $\mathcal{O}(h^2)$.
+                </p>
+              </div>
+
+              <!-- Etapa 3: Discretización -->
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] uppercase font-bold text-amber-400">3. Discretización Operativa ($h=1$)</span>
+                <div class="my-1 font-mono text-[11px] text-slate-200">
+                  $$V'(t) = \frac{V(t+h) - V(t-h)}{2h} - \frac{h^2}{6}V'''(\xi)$$
+                </div>
+                <div class="text-[10px] text-slate-400 mt-1 space-y-0.5">
+                  <p>• <b>2019 (Progresiva):</b> $\frac{-3(618.66)+4(548.72)-480.32}{2} = \mathbf{-70.71\text{ Mm}^3/\text{año}}$</p>
+                  <p>• <b>2022 (Centrada):</b> $\frac{309.79 - 480.32}{2} = \mathbf{-85.26\text{ Mm}^3/\text{año}}$</p>
+                  <p>• <b>2025 (Regresiva):</b> $\frac{3(666.75)-4(445.64)+309.79}{2} = \mathbf{+263.74\text{ Mm}^3/\text{año}}$</p>
+                </div>
+              </div>
+
+              <!-- Etapa 4: Auditoría de Error -->
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] uppercase font-bold text-rose-400">4. Auditoría de Error: Richardson vs. 5 Puntos</span>
+                <div class="my-1 font-mono text-[11px] text-slate-200">
+                  $$R = \frac{4D(h) - D(2h)}{3} \equiv \text{Fórmula 5 pts}$$
+                </div>
+                <p class="text-[11px] text-slate-300 mt-1">
+                  En 2022: $|D(1) - D(2)|/3 = \mathbf{19.8\text{ Mm}^3/\text{año}}$. La hipótesis de suavidad de Richardson no se cumple en el quiebre de 2023.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-3 bg-cyan-950/40 rounded-lg border border-cyan-800/60 text-[11px] text-cyan-200">
+            📌 <b>Veredicto de la Etapa 5:</b> Debido a la incertidumbre del quiebre en V, las decisiones estratégicas deben regirse por la <b>tasa promedio de periodo</b> ($-77.2\text{ Mm}^3/\text{año}$) y no por la derivada puntual del extremo 2025.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: INTEGRACIÓN NUMÉRICA -->
+    <div id="tab-integracion" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 bg-slate-900 p-5 rounded-xl border border-slate-800 shadow">
+          <h2 class="text-lg font-semibold text-cyan-300 mb-1">Integración Numérica: Área Acumulada y Nivel Medio</h2>
+          <p class="text-xs text-slate-400 mb-4">6 subintervalos uniformes ($h=1\text{ año}$). Comparación contra el nivel de almacenamiento representativo.</p>
+          <div id="plot-integracion" style="height: 420px;"></div>
+        </div>
+
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-md font-bold text-slate-200 border-b border-slate-700 pb-2 mb-3">
+              Auditoría de Cuadraturas (Etapa 4)
+            </h3>
+            
+            <div class="space-y-2.5 text-xs">
+              <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between items-center">
+                <div>
+                  <span class="font-bold text-cyan-300 block">Trapecio Compuesto</span>
+                  <span class="text-[10px] text-slate-400 font-mono">$$\int \approx h\left[\frac{V_0+V_6}{2} + \sum V_i\right]$$</span>
+                </div>
+                <div class="text-right">
+                  <span class="font-mono font-bold text-slate-200 block">480.1 Mm³</span>
+                  <span class="text-[10px] text-slate-400">Error O(h²)</span>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded bg-slate-950 border border-emerald-900/60 bg-emerald-950/20 flex justify-between items-center">
+                <div>
+                  <span class="font-bold text-emerald-400 block">Simpson 1/3 Compuesto</span>
+                  <span class="text-[10px] text-slate-400 font-mono">$$\frac{h}{3}[V_0 + 4\sum V_{\text{imp}} + 2\sum V_{\text{par}} + V_6]$$</span>
+                </div>
+                <div class="text-right">
+                  <span class="font-mono font-bold text-emerald-300 block">480.9 Mm³</span>
+                  <span class="text-[10px] text-emerald-400">Error O(h⁴) [Base]</span>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between items-center">
+                <div>
+                  <span class="font-bold text-amber-300 block">Simpson 3/8 Compuesto</span>
+                  <span class="text-[10px] text-slate-400">Afectado por bloque 2023</span>
+                </div>
+                <div class="text-right">
+                  <span class="font-mono font-bold text-slate-200 block">471.6 Mm³</span>
+                  <span class="text-[10px] text-slate-400">Dif: -1.94%</span>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between items-center">
+                <div>
+                  <span class="font-bold text-purple-400 block">Romberg [T(1), T(2)]</span>
+                  <span class="text-[10px] text-slate-400">Extrapolación sobre Trapecios</span>
+                </div>
+                <div class="text-right">
+                  <span class="font-mono font-bold text-purple-300 block">480.9 Mm³</span>
+                  <span class="text-[10px] text-purple-400">Idéntico a Simpson</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-cyan-950/40 border border-cyan-800/60 text-xs space-y-1">
+            <span class="text-cyan-300 font-bold block">Holgura Promedio sobre Nivel Crítico:</span>
+            <p class="text-slate-300 text-[11px]">
+              $$\int_{2019}^{2025} (V(t) - 203.52)\,dt = \mathbf{1,664.5\text{ Mm}^3\cdot\text{año}}$$
+              Equivale a una holgura media efectiva de <b>277.4 Mm³</b> de resiliencia hídrica.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: PROYECCIÓN 2026+, ESCENARIOS Y PRESUPUESTOS -->
+    <div id="tab-escenarios" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Gráfica de Proyección Dinámica -->
+        <div class="lg:col-span-2 bg-slate-900 p-5 rounded-xl border border-slate-800 shadow">
+          <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
+            <div>
+              <h2 class="text-lg font-semibold text-cyan-300">Etapa 5: Proyección Temporal 2026+ con Techo Físico</h2>
+              <p class="text-xs text-slate-400">Modelo lineal acotado: $V(t) = \min(782.5, \, V_0 + (r_{\text{sequía}} + x\cdot 31.536)\cdot t)$</p>
+            </div>
+            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800 inline-block text-center shadow">
+              Margen: Calculando...
+            </div>
+          </div>
+          <div id="plot-proyeccion" style="height: 410px;"></div>
+        </div>
+
+        <!-- Controles Deslizantes y Opciones con Presupuestos -->
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow space-y-4">
+          <h3 class="text-md font-bold text-slate-200 border-b border-slate-700 pb-2">Parámetros Dinámicos y Obras</h3>
+          
+          <!-- Slider Tasa de Sequía -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300 font-medium">Tasa de Sequía de Fondo ($r$):</span>
+              <span id="label-tasa-sequia" class="font-mono text-cyan-400 font-bold">-77.2 Mm³/año</span>
+            </div>
+            <input type="range" id="slider-sequia" min="50" max="150" step="1" value="77.2" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500" oninput="actualizarSimulacion()">
+            <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>Optimista (-61.8)</span>
+              <span>Base (-77.2)</span>
+              <span>Extremo (-143.6)</span>
+            </div>
+          </div>
+
+          <!-- Opciones Presupuestales Botones Rápidos -->
+          <div>
+            <label class="text-xs text-slate-300 font-medium block mb-2">Intervenciones Cuantificadas:</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button onclick="setOpcion(0, 0, 'Sin Acciones', '0', 'Ninguna', 'CONAGUA / OCAVM')" class="btn-opcion p-2 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-left">
+                <div class="font-bold text-slate-300">Sin Acciones</div>
+                <div class="text-[10px] text-slate-400">0 m³/s | $0 MDP</div>
+              </button>
+              <button onclick="setOpcion(1, 31.54, 'Económica: Fugas y Medición', '1,500 - 3,000', 'Sustitución de 120 km de red y 450 macromedidores', 'SACMEX / CAEM')" class="btn-opcion p-2 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-left">
+                <div class="font-bold text-cyan-400">Económica</div>
+                <div class="text-[10px] text-slate-400">1 m³/s | ~$2,000 MDP</div>
+              </button>
+              <button onclick="setOpcion(3, 94.61, 'Media: Reúso y Pozos Infiltración', '8,000 - 15,000', 'Plantas terciarias Cerro Estrella y 20 pozos infiltración', 'CONAGUA / OCAVM / CDMX')" class="btn-opcion p-2 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-left">
+                <div class="font-bold text-emerald-400">Media (Estabiliza)</div>
+                <div class="text-[10px] text-slate-400">3 m³/s | ~$10,000 MDP</div>
+              </button>
+              <button onclick="setOpcion(5, 157.68, 'Lujo: Nueva Cuenca Macrorregional', '25,000 - 50,000+', 'Ampliación Temascaltepec o trasvase Necaxa', 'SHCP / CONAGUA (PEF/APP)')" class="btn-opcion p-2 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-left">
+                <div class="font-bold text-purple-400">Lujo</div>
+                <div class="text-[10px] text-slate-400">5 m³/s | ~$35,000+ MDP</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Slider Continuo de Reducción -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300 font-medium">Reducción Manual de Caudal ($x$):</span>
+              <span id="label-caudal" class="font-mono text-emerald-400 font-bold">0.0 m³/s</span>
+            </div>
+            <input type="range" id="slider-caudal" min="0" max="6" step="0.1" value="0" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500" oninput="actualizarSliderManual()">
+            <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>0 m³/s</span>
+              <span class="text-emerald-400 font-semibold">Equilibrio: 2.45 m³/s</span>
+              <span>6 m³/s</span>
+            </div>
+          </div>
+
+          <!-- Ficha Técnica de Costo y Obra -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs space-y-1.5">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Inversión Estimada:</span>
+              <span id="info-costo" class="font-mono font-bold text-amber-300">$0 MDP</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Organismos Ejecutores:</span>
+              <span id="info-responsable" class="text-slate-200 font-medium text-right">CONAGUA / OCAVM</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px]">Acción física inmediata:</span>
+              <span id="info-obra" class="text-cyan-300 text-[11px] block mt-0.5">Ninguna intervención asignada.</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: PROBLEMA INVERSO (ETAPA 5) -->
+    <div id="tab-inverso" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 bg-slate-900 p-5 rounded-xl border border-slate-800 shadow">
+          <h2 class="text-lg font-semibold text-cyan-300 mb-1">Resolución del Problema Inverso: Caudal Mínimo vs. Horizonte</h2>
+          <p class="text-xs text-slate-400 mb-4">Despeje del caudal exacto para garantizar $H$ años de margen: $x = \frac{|r| - \frac{M}{H}}{31.536}$</p>
+          <div id="plot-inverso" style="height: 410px;"></div>
+        </div>
+
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-md font-bold text-slate-200 border-b border-slate-700 pb-2 mb-3">
+              Calculadora de Política Pública
+            </h3>
+            
+            <div class="space-y-4 text-xs">
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">Horizonte que se busca garantizar ($H$ en años):</label>
+                <div class="flex gap-2">
+                  <input type="number" id="input-horizonte" min="3" max="50" value="15" class="bg-slate-950 border border-slate-700 rounded px-3 py-1.5 w-full text-slate-100 font-mono text-sm" oninput="calcularInverso()">
+                  <span class="p-1.5 text-slate-400 font-medium">años</span>
+                </div>
+              </div>
+
+              <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2.5">
+                <div>
+                  <span class="text-slate-400 text-[11px]">Caudal a Reducir / Aportar ($x$):</span>
+                  <div id="res-caudal-inverso" class="text-2xl font-bold font-mono text-cyan-400">1.47 m³/s</div>
+                  <span id="res-porcentaje-ext" class="text-[10px] text-slate-400">9.4% de la extracción total (15.7 m³/s)</span>
+                </div>
+
+                <div class="pt-2 border-t border-slate-800">
+                  <span class="text-slate-400 text-[11px]">Inversión Paramétrica Sugerida:</span>
+                  <div id="res-presupuesto-inverso" class="text-sm font-bold font-mono text-amber-300">~$3,500 - $5,000 MDP</div>
+                  <p class="text-[10px] text-slate-400 mt-0.5">Financiamiento: Fideicomisos locales (SACMEX/CAEM) + Fondos Federales.</p>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-200 space-y-1">
+                <span class="font-bold block">Condición de Equilibrio Permanente ($H \to \infty$):</span>
+                <p>
+                  Para neutralizar el déficit del caso base ($r = -77.2\text{ Mm}^3/\text{año}$), la reducción mínima matemática es:
+                  $$x_{\text{eq}} = \frac{77.218}{31.536} = \mathbf{2.45\text{ m}^3/\text{s}}$$
+                  La opción Económica ($1\text{ m}^3/\text{s}$) solo posterga la crisis; la opción Media ($3\text{ m}^3/\text{s}$) es la única que alcanza equilibrio definitivo.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // DATOS HISTÓRICOS OFICIALES (Unidad 2 - Cutzamala)
+    const dataHistorica = {
+      anios: [2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      vol: [618.662, 548.719, 480.318, 453.437, 309.790, 445.639, 666.747],
+      derivadas: [-70.71, -69.17, -47.64, -85.26, -3.90, 178.48, 263.74],
+      capacidad: 782.5,
+      critico: 203.52,
+      bombeoParo: 155.0
+    };
+
+    let estado = {
+      tasaSequia: -77.2,
+      caudalReducido: 0,
+      volInicial: 666.747,
+      efectoAnual: 0,
+      mostrarTangentes: false
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ]
+      });
+      initGraficaHistorica();
+      initGraficaIntegracion();
+      actualizarSimulacion();
+      initGraficaInverso();
+      calcularInverso();
+    });
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-cyan-600', 'text-white');
+        btn.classList.add('bg-slate-800', 'text-slate-300');
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById(tabId.replace('tab-', 'btn-'));
+      activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+      activeBtn.classList.add('bg-cyan-600', 'text-white');
+
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    // 1. SERIE HISTÓRICA & RECTAS TANGENTES
+    function initGraficaHistorica() {
+      const traceV = {
+        x: dataHistorica.anios,
+        y: dataHistorica.vol,
+        mode: 'lines+markers',
+        name: 'Volumen V(t) [Mm³]',
+        line: { color: '#06b6d4', width: 3 },
+        marker: { size: 8, color: '#22d3ee' }
+      };
+
+      const traceCap = {
+        x: [2019, 2025],
+        y: [dataHistorica.capacidad, dataHistorica.capacidad],
+        mode: 'lines',
+        name: 'Techo Físico (782.5 Mm³)',
+        line: { color: '#a855f7', width: 1.5, dash: 'dot' }
+      };
+
+      const traceCrit = {
+        x: [2019, 2025],
+        y: [dataHistorica.critico, dataHistorica.critico],
+        mode: 'lines',
+        name: 'Nivel Crítico (203.5 Mm³)',
+        line: { color: '#f43f5e', width: 1.5, dash: 'dash' }
+      };
+
+      const dataPlots = [traceV, traceCap, traceCrit];
+
+      // Rectas tangentes si el usuario las activa
+      if (estado.mostrarTangentes) {
+        // Tangente 2022
+        dataPlots.push({
+          x: [2021.5, 2022.5],
+          y: [453.437 - (-85.26) * 0.5, 453.437 + (-85.26) * 0.5],
+          mode: 'lines',
+          name: "Tangente 2022 (V' = -85.3)",
+          line: { color: '#f59e0b', width: 2 }
+        });
+        // Tangente 2024
+        dataPlots.push({
+          x: [2023.5, 2024.5],
+          y: [445.639 - (178.48) * 0.5, 445.639 + (178.48) * 0.5],
+          mode: 'lines',
+          name: "Tangente 2024 (V' = +178.5)",
+          line: { color: '#10b981', width: 2 }
+        });
+      }
+
+      const layout = {
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        margin: { t: 20, r: 20, l: 50, b: 40 },
+        legend: { orientation: 'h', y: 1.15, font: { color: '#94a3b8', size: 10 } },
+        xaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, dtick: 1 },
+        yaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, title: { text: 'Almacenamiento (Mm³)', font: { color: '#94a3b8', size: 11 } } }
+      };
+
+      Plotly.newPlot('plot-historico', dataPlots, layout, { responsive: true, displayModeBar: false });
+    }
+
+    function toggleTangente() {
+      estado.mostrarTangentes = !estado.mostrarTangentes;
+      const btn = document.getElementById('btn-tangente');
+      btn.innerText = estado.mostrarTangentes ? "Ocultar Tangentes V'(t)" : "Ver Rectas Tangentes V'(t)";
+      btn.className = estado.mostrarTangentes 
+        ? "px-2.5 py-1 rounded bg-cyan-700 text-white border border-cyan-500 text-xs"
+        : "px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs";
+      initGraficaHistorica();
+    }
+
+    // 2. INTEGRACIÓN NUMÉRICA
+    function initGraficaIntegracion() {
+      const traceArea = {
+        x: dataHistorica.anios,
+        y: dataHistorica.vol,
+        fill: 'tozeroy',
+        fillcolor: 'rgba(6, 182, 212, 0.15)',
+        mode: 'lines+markers',
+        name: 'Integral ∫ V(t)dt',
+        line: { color: '#06b6d4', width: 2 }
+      };
+
+      const traceProm = {
+        x: [2019, 2025],
+        y: [480.9, 480.9],
+        mode: 'lines',
+        name: 'Promedio Simpson 1/3 (480.9 Mm³)',
+        line: { color: '#f59e0b', width: 2.5 }
+      };
+
+      const traceCrit = {
+        x: [2019, 2025],
+        y: [dataHistorica.critico, dataHistorica.critico],
+        mode: 'lines',
+        name: 'Nivel Crítico (203.52 Mm³)',
+        line: { color: '#f43f5e', width: 1.5, dash: 'dash' }
+      };
+
+      const layout = {
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        margin: { t: 20, r: 20, l: 50, b: 40 },
+        legend: { orientation: 'h', y: 1.15, font: { color: '#94a3b8', size: 10 } },
+        xaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, dtick: 1 },
+        yaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, title: { text: 'Almacenamiento (Mm³)', font: { color: '#94a3b8', size: 11 } } }
+      };
+
+      Plotly.newPlot('plot-integracion', [traceArea, traceProm, traceCrit], layout, { responsive: true, displayModeBar: false });
+    }
+
+    // 3. PROYECCIÓN DINÁMICA & PRESUPUESTOS
+    function setOpcion(caudal, efecto, nombre, costo, obra, respons) {
+      document.getElementById('slider-caudal').value = caudal;
+      document.getElementById('info-costo').innerText = `$${costo} MDP`;
+      document.getElementById('info-responsable').innerText = respons;
+      document.getElementById('info-obra').innerText = obra;
+      actualizarSliderManual();
+    }
+
+    function actualizarSliderManual() {
+      const caudal = parseFloat(document.getElementById('slider-caudal').value);
+      document.getElementById('label-caudal').innerText = `${caudal.toFixed(1)} m³/s`;
+      estado.caudalReducido = caudal;
+      estado.efectoAnual = caudal * 31.536;
+      actualizarSimulacion();
+    }
+
+    function actualizarSimulacion() {
+      const sequiaVal = parseFloat(document.getElementById('slider-sequia').value);
+      estado.tasaSequia = -sequiaVal;
+      document.getElementById('label-tasa-sequia').innerText = `-${sequiaVal.toFixed(1)} Mm³/año`;
+
+      const tasaNeta = estado.tasaSequia + estado.efectoAnual;
+      const aniosProy = 12;
+      let tArr = [], vArr = [];
+
+      for (let t = 0; t <= aniosProy; t += 0.2) {
+        tArr.push(2025 + t);
+        let vol = estado.volInicial + tasaNeta * t;
+        if (vol > dataHistorica.capacidad) vol = dataHistorica.capacidad;
+        vArr.push(vol);
+      }
+
+      const margenNeto = estado.volInicial - dataHistorica.critico;
+      const badge = document.getElementById('status-badge');
+
+      if (tasaNeta >= 0) {
+        badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 shadow";
+        badge.innerText = `Sistema Estable (Superávit: +${tasaNeta.toFixed(1)} Mm³/año)`;
+      } else {
+        const tiempoMargen = margenNeto / Math.abs(tasaNeta);
+        const anioLlegada = (2025 + tiempoMargen).toFixed(1);
+        const colorClass = tiempoMargen < 5 ? "bg-rose-950 text-rose-300 border-rose-800" : (tiempoMargen <= 10 ? "bg-amber-950 text-amber-300 border-amber-800" : "bg-cyan-950 text-cyan-300 border-cyan-800");
+        badge.className = `px-3 py-1 rounded-full text-xs font-bold border ${colorClass} shadow`;
+        badge.innerText = `Margen: ${tiempoMargen.toFixed(1)} años (Llegada en ${anioLlegada})`;
+      }
+
+      const traceProy = {
+        x: tArr,
+        y: vArr,
+        mode: 'lines',
+        name: `Proyección (Tasa: ${tasaNeta.toFixed(1)} Mm³/año)`,
+        line: { color: tasaNeta >= 0 ? '#10b981' : (margenNeto / Math.abs(tasaNeta) < 5 ? '#f43f5e' : '#f59e0b'), width: 3.5 }
+      };
+
+      const traceCap = {
+        x: [2025, 2037],
+        y: [dataHistorica.capacidad, dataHistorica.capacidad],
+        mode: 'lines',
+        name: 'Techo Físico (782.5 Mm³)',
+        line: { color: '#a855f7', width: 1.5, dash: 'dot' }
+      };
+
+      const traceCrit = {
+        x: [2025, 2037],
+        y: [dataHistorica.critico, dataHistorica.critico],
+        mode: 'lines',
+        name: 'Nivel Crítico (203.5 Mm³)',
+        line: { color: '#f43f5e', width: 1.5, dash: 'dash' }
+      };
+
+      const layout = {
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        margin: { t: 20, r: 20, l: 50, b: 40 },
+        legend: { orientation: 'h', y: 1.15, font: { color: '#94a3b8', size: 10 } },
+        xaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, dtick: 2 },
+        yaxis: { range: [100, 820], gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, title: { text: 'Almacenamiento (Mm³)', font: { color: '#94a3b8', size: 11 } } }
+      };
+
+      Plotly.newPlot('plot-proyeccion', [traceProy, traceCap, traceCrit], layout, { responsive: true, displayModeBar: false });
+    }
+
+    // 4. PROBLEMA INVERSO
+    function initGraficaInverso() {
+      const H = [5, 10, 15, 20, 25, 30];
+      const M = 463.227;
+
+      const calcCaudal = (r, hArr) => hArr.map(h => Math.max(0, (Math.abs(r) - M / h) / 31.536));
+
+      const traceBase = { x: H, y: calcCaudal(-77.2, H), mode: 'lines+markers', name: 'Caso Base (-77.2)', line: { color: '#06b6d4' } };
+      const traceExtr = { x: H, y: calcCaudal(-143.65, H), mode: 'lines+markers', name: 'Extremo (-143.65)', line: { color: '#f43f5e' } };
+      const tracePes = { x: H, y: calcCaudal(-92.66, H), mode: 'lines+markers', name: 'Pesimista (+20%)', line: { color: '#f59e0b' } };
+
+      const layout = {
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        margin: { t: 20, r: 20, l: 50, b: 40 },
+        legend: { orientation: 'h', y: 1.15, font: { color: '#94a3b8', size: 10 } },
+        xaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, title: { text: 'Horizonte Deseado H (Años)', font: { color: '#94a3b8', size: 11 } } },
+        yaxis: { gridcolor: '#1e293b', tickfont: { color: '#94a3b8' }, title: { text: 'Reducción Necesaria x (m³/s)', font: { color: '#94a3b8', size: 11 } } }
+      };
+
+      Plotly.newPlot('plot-inverso', [traceBase, tracePes, traceExtr], layout, { responsive: true, displayModeBar: false });
+    }
+
+    function calcularInverso() {
+      const H = parseFloat(document.getElementById('input-horizonte').value);
+      if (isNaN(H) || H <= 0) return;
+
+      const M = 463.227;
+      const r = 77.218;
+      const x = Math.max(0, (r - M / H) / 31.536);
+      const pct = (x / 15.7) * 100;
+
+      document.getElementById('res-caudal-inverso').innerText = `${x.toFixed(2)} m³/s`;
+      document.getElementById('res-porcentaje-ext').innerText = `${pct.toFixed(1)}% de la extracción actual (15.7 m³/s)`;
+
+      let costStr = "";
+      if (x <= 1.0) costStr = `~$${(x * 2000).toFixed(0)} - $${(x * 3000).toFixed(0)} MDP (Fugas / SACMEX)`;
+      else if (x <= 3.0) costStr = `~$${(x * 3500).toFixed(0)} - $${(x * 4800).toFixed(0)} MDP (Reúso / OCAVM)`;
+      else costStr = `~$${(x * 6000).toFixed(0)}+ MDP (Infraestructura Mayor / PEF)`;
+
+      document.getElementById('res-presupuesto-inverso').innerText = costStr;
+    }
+  </script>
+</body>
+</html>
